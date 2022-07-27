@@ -29,7 +29,8 @@ namespace WatsonSyslog
                     receivedBytes = _ListenerUdp.Receive(ref endpoint);
                     receivedData = Encoding.ASCII.GetString(receivedBytes, 0, receivedBytes.Length);
                     string msg = null;
-                    if (_Settings.DisplayTimestamps) msg = DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss") + " ";
+                    if (_Settings.DisplayTimestamps)
+                        msg = DateTime.Now.ToString("yyyy-dd-MM HH:mm:ss") + " ";
                     msg += receivedData;
                     Console.WriteLine(msg);
                     
@@ -39,7 +40,7 @@ namespace WatsonSyslog
 
                     lock (_WriterLock)
                     {
-                        _MessageQueue.Add(msg);
+                        _MessageQueue.Add(new ValueTuple<IPEndPoint, string>(endpoint, msg));
                     }
 
                     #endregion

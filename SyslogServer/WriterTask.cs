@@ -31,9 +31,9 @@ namespace WatsonSyslog
                                 continue;
                             }
                              
-                            foreach (string currMessage in _MessageQueue)
+                            foreach (ValueTuple<IPEndPoint, string> currMessage in _MessageQueue)
                             { 
-                                string currFilename = _Settings.LogFileDirectory + DateTime.Now.ToString("MMddyyyy") + "-" + _Settings.LogFilename;
+                                string currFilename = _Settings.LogFileDirectory + DateTime.Now.ToString("yyyyMMdd") + "-" + _Settings.LogFilename;
                                  
                                 if (!File.Exists(currFilename))
                                 {
@@ -49,12 +49,12 @@ namespace WatsonSyslog
                                  
                                 using (StreamWriter swAppend = File.AppendText(currFilename))
                                 {
-                                    swAppend.WriteLine(currMessage);
+                                    swAppend.WriteLine(currMessage.Item2);
                                 } 
                             }
 
                             _LastWritten = DateTime.Now;
-                            _MessageQueue = new List<string>();
+                            _MessageQueue = new List<ValueTuple<IPEndPoint, string>>();
                         } 
                     } 
                 }

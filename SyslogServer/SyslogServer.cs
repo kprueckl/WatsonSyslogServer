@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ namespace WatsonSyslog
         
         public static DateTime _LastWritten = DateTime.Now;
 
-        private static List<string> _MessageQueue = new List<string>();
+        private static List<ValueTuple<IPEndPoint, string>> _MessageQueue = new List<ValueTuple<IPEndPoint, string>>();
         private static readonly object _WriterLock = new object();
 
         static void Main(string[] args)
@@ -51,14 +52,15 @@ namespace WatsonSyslog
                 }
             }
 
-            if (!Directory.Exists(_Settings.LogFileDirectory)) Directory.CreateDirectory(_Settings.LogFileDirectory);
+            if (!Directory.Exists(_Settings.LogFileDirectory))
+                Directory.CreateDirectory(_Settings.LogFileDirectory);
 
             #endregion
             
             #region Start-Server
 
             Console.WriteLine("---");
-            Console.WriteLine(_Settings.Version);
+            Console.WriteLine("Watson Syslog Server v" + Assembly.GetEntryAssembly().GetName().Version);
             Console.WriteLine("(c)2017 Joel Christner");
             Console.WriteLine("---");
             
