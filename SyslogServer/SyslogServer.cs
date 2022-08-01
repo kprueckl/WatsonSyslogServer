@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,83 +22,94 @@ namespace WatsonSyslog
         
         public static DateTime _LastWritten = DateTime.Now;
 
-        private static List<ValueTuple<IPEndPoint, string>> _MessageQueue = new List<ValueTuple<IPEndPoint, string>>();
-        private static readonly object _WriterLock = new object();
+        //private static List<ValueTuple<IPEndPoint, string>> _MessageQueue = new List<ValueTuple<IPEndPoint, string>>();
+        //private static readonly object _WriterLock = new object();
+
+        public static Logger Logger { get; private set; }
 
         static void Main(string[] args)
         {
-            #region Read-Config-File
+            Logger = LogManager.GetCurrentClassLogger();
 
-            if (File.Exists("syslog.json"))
+            try
             {
-                _SettingsContents = Encoding.UTF8.GetString(File.ReadAllBytes("syslog.json"));
-            } 
+                #region Read-Config-File
 
-            if (String.IsNullOrEmpty(_SettingsContents))
-            {
-                Console.WriteLine("Unable to read syslog.json, using default configuration:");
-                _Settings = Settings.Default();
-                Console.WriteLine(Common.SerializeJson(_Settings));
-            }
-            else
-            {
-                try
+                if (File.Exists("syslog.json"))
                 {
-                    _Settings = Common.DeserializeJson<Settings>(_SettingsContents);
+                    _SettingsContents = Encoding.UTF8.GetString(File.ReadAllBytes("syslog.json"));
                 }
-                catch (Exception)
+
+                if (String.IsNullOrEmpty(_SettingsContents))
                 {
-                    Console.WriteLine("Unable to deserialize syslog.json, please check syslog.json for correctness, exiting");
-                    Environment.Exit(-1);
+                    Console.WriteLine("Unable to read syslog.json, using default configuration:");
+                    _Settings = Settings.Default();
+                    Console.WriteLine(Common.SerializeJson(_Settings));
                 }
+                else
+                {
+                    try
+                    {
+                        _Settings = Common.DeserializeJson<Settings>(_SettingsContents);
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("Unable to deserialize syslog.json, please check syslog.json for correctness, exiting");
+                        Environment.Exit(-1);
+                    }
+                }
+
+                //if (!Directory.Exists(_Settings.LogFileDirectory))
+                //    Directory.CreateDirectory(_Settings.LogFileDirectory);
+
+                #endregion
+
+                #region Start-Server
+
+                Console.WriteLine("---");
+                Console.WriteLine("Watson Syslog Server v" + Assembly.GetEntryAssembly().GetName().Version);
+                Console.WriteLine("(c)2017 Joel Christner / (c)2022 Klaus Prückl");
+                Console.WriteLine("---");
+
+                StartServer();
+
+                #endregion
+
+                #region Console
+
+                while (true)
+                {
+                    string userInput = Common.InputString("[syslog :: ? for help] >", null, false);
+                    switch (userInput)
+                    {
+                        case "?":
+                            Console.WriteLine("---");
+                            Console.WriteLine("  q      quit the application");
+                            Console.WriteLine("  cls    clear the screen");
+                            break;
+
+                        case "q":
+                            Console.WriteLine("Exiting.");
+                            Environment.Exit(0);
+                            break;
+
+                        case "c":
+                        case "cls":
+                            Console.Clear();
+                            break;
+
+                        default:
+                            Console.WriteLine("Unknown command.  Type '?' for help.");
+                            continue;
+                    }
+                }
+
+                #endregion
             }
-
-            if (!Directory.Exists(_Settings.LogFileDirectory))
-                Directory.CreateDirectory(_Settings.LogFileDirectory);
-
-            #endregion
-            
-            #region Start-Server
-
-            Console.WriteLine("---");
-            Console.WriteLine("Watson Syslog Server v" + Assembly.GetEntryAssembly().GetName().Version);
-            Console.WriteLine("(c)2017 Joel Christner");
-            Console.WriteLine("---");
-            
-            StartServer();
-
-            #endregion
-
-            #region Console
-             
-            while (true)
+            finally
             {
-                string userInput = Common.InputString("[syslog :: ? for help] >", null, false);
-                switch (userInput)
-                {
-                    case "?":
-                        Console.WriteLine("---");
-                        Console.WriteLine("  q      quit the application");
-                        Console.WriteLine("  cls    clear the screen");
-                        break;
-
-                    case "q": 
-                        Console.WriteLine("Exiting.");
-                        Environment.Exit(0);
-                        break;
-
-                    case "c":
-                    case "cls":
-                        Console.Clear();
-                        break;
-                            
-                    default:
-                        Console.WriteLine("Unknown command.  Type '?' for help.");
-                        continue;
-                }
+                LogManager.Shutdown();
             }
-                  
-            #endregion
         }
 
         static void StartServer()
@@ -110,8 +122,8 @@ namespace WatsonSyslog
                 _ListenerThread.Start();
                 Console.WriteLine("Listening on UDP/" + _Settings.UdpPort + ".");
 
-                Task.Run(() => WriterTask());
-                Console.WriteLine("Writer thread started successfully");
+                //Task.Run(() => WriterTask());
+                //Console.WriteLine("Writer thread started successfully");
             }
             catch (Exception e)
             {
